@@ -39,15 +39,45 @@
 // });
 //
 // module.exports = app;
+//
+// var dt = require('./myfirstmodul');
+//
+// console.log("test");
+//
+// var http = require('http');
+//
+// http.createServer(function (req, res) {
+//     res.writeHead(200, {'Content-Type': 'text/plain'});
+//     res.write("The date and time are currently: " + dt.myDateTime());
+//     res.end('Hello World Yana!');
+// }).listen(8080);
 
-var dt = require('./myfirstmodul');
+const books = require('./books');
+const express = require('express');
+const app = express();
+const port = 3000;
 
-console.log("test");
 
-var http = require('http');
+app.get('/', (request, response) => {
+    response.send('Hello from Express!')
+});
 
-http.createServer(function (req, res) {
-    res.writeHead(200, {'Content-Type': 'text/plain'});
-    res.write("The date and time are currently: " + dt.myDateTime());
-    res.end('Hello World Yana!');
-}).listen(8080);
+app.get('/books', (request, response) => {
+    response.send(books.getBooksNames());
+    // let array = "[Book 1, Book 2, Book 3]";
+    // console.log(a.b);
+});
+
+app.use((err, request, response, next) => {
+    // логирование ошибки, пока просто console.log
+    console.log(err);
+    response.status(500).send('Something broke!')
+});
+
+
+app.listen(port, (err) => {
+    if (err) {
+        return console.log('something bad happened', err)
+    }
+    console.log(`server is listening on ${port}`)
+});
