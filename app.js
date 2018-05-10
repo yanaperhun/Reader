@@ -57,6 +57,22 @@ const express = require('express');
 const app = express();
 const port = 3000;
 
+var mysql = require('mysql');
+
+var con = mysql.createConnection({
+    host: "82.146.56.234",
+    user: "root",
+    password: "IDFD9thFRY"
+    // database: "reader"
+});
+
+con.connect(function (err) {
+    if (err) {
+        console.error('error connecting: ' + err.stack);
+        return;
+    }
+});
+
 
 app.get('/', (request, response) => {
     response.send('Hello from Express!')
