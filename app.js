@@ -55,6 +55,7 @@
 const books = require('./books');
 const sqlManager = require('./sqlManager');
 const express = require('express');
+const telegrambot = require('./telegrambot');
 const app = express();
 const port = 3000;
 
@@ -111,4 +112,5 @@ app.listen(port, (err) => {
         return console.log('something bad happened', err)
     }
     console.log(`server is listening on ${port}`)
+    telegrambot();
 });
