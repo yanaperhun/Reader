@@ -53,6 +53,7 @@
 // }).listen(8080);
 
 const books = require('./books');
+const sqlManager = require('./sqlManager');
 const express = require('express');
 const app = express();
 const port = 3000;
@@ -62,8 +63,8 @@ var mysql = require('mysql');
 var con = mysql.createConnection({
     host: "82.146.56.234",
     user: "root",
-    password: "IDFD9thFRY"
-    // database: "reader"
+    password: "IDFD9thFRY",
+    database: "reader"
 });
 
 con.connect(function (err) {
@@ -71,12 +72,26 @@ con.connect(function (err) {
         console.error('error connecting: ' + err.stack);
         return;
     }
+
+    // var sql = "INSERT INTO t_Authors (Description) VALUES ('Достоевский Ф.М.')";
+    //     con.query(sql, function (err, result) {
+    //         if (err) throw err;
+    //         console.log("1 record inserted");
+    //         console.log(result.insertId)
+    //     });
+    //
+    // con.query("SELECT * FROM t_Authors WHERE Id = '2'", function (err, result) {
+    //     if (err) throw err;
+    //     console.log(result);
+    // });
 });
 
+sqlManager.insertBookToDb(con, "Достоевский", "Идиот", "yoba yoba zhopa zhopa putin putin");
 
 app.get('/', (request, response) => {
     response.send('Hello from Express!')
 });
+
 
 app.get('/books', (request, response) => {
     response.send(books.getBooksNames());
