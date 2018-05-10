@@ -14,6 +14,10 @@ exports.insertBookToDb = function (con, author, book, text) {
     });
 };
 
+exports.selectAuthors = function(con, callback) {
+    con.query("SELECT * FROM t_Authors", callback);
+}
+
 findOffsets = function(con, text, bookId){
     var wordCounter = 0;
     var isSpaceDetected = true;

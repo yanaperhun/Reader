@@ -1,12 +1,5 @@
 module.exports = function () {
 
-    process.env.NTBA_FIX_319 = 1;
-    const TelegramBot = require('node-telegram-bot-api');
-
-    const token = '574778308:AAHPlkfVje9Ai_TwxkMVBGv3iXPhNBLTLeQ';
-
-// Create a bot that uses 'polling' to fetch new updates
-    const bot = new TelegramBot(token, {polling: true});
 
 
 // Matches "/echo [whatever]"
