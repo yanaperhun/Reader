@@ -55,13 +55,15 @@
 const books = require('./books');
 const sqlManager = require('./sqlManager');
 const express = require('express');
-process.env.NTBA_FIX_319 = 1;
 const TelegramBot = require('node-telegram-bot-api');
 const token = '574778308:AAHPlkfVje9Ai_TwxkMVBGv3iXPhNBLTLeQ';
-
-// Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, {polling: true});
 const app = express();
+
+process.env.NTBA_FIX_319 = 1;
+
+// Create a bot that uses 'polling' to fetch new updates
+
 const port = 3000;
 
 var mysql = require('mysql');
@@ -82,8 +84,6 @@ con.connect(function (err) {
 
 });
 
-// sqlManager.insertBookToDb(con, "Достоевский", "Идиот", "yoba yoba zhopa zhopa putin putin");
-
 app.get('/', (request, response) => {
     response.send('Hello from Express!')
 });
@@ -94,6 +94,22 @@ app.get('/books', (request, response) => {
     // let array = "[Book 1, Book 2, Book 3]";
     // console.log(a.b);
 });
+
+app.get('/upload_book', (request, response) => {
+    // sqlManager.insertBookToDb(connection, "Оурел", "1984", )
+    sqlManager.readStringFromFile(function (error, data) {
+        console.log("Асинхронное чтение файла");
+        if (error) {
+            console.log(error);
+            throw  error;
+        } else {
+            response.send(data)
+            console.log(data.toString());
+            sqlManager.insertBookToDb(con, 'Джордж Оруэлл', '1984', data)
+        }// выводим считанные данные
+    })
+});
+
 
 app.use((err, request, response, next) => {
     // логирование ошибки, пока просто console.log
@@ -109,22 +125,30 @@ app.listen(port, (err) => {
     console.log(`server is listening on ${port}`)
 });
 
-// Matches "/echo [whatever]"
-bot.onText(/\/echo (.+)/, (msg, match) => {
-    // 'msg' is the received Message from Telegram
-    // 'match' is the result of executing the regexp above on the text content
-    // of the message
-
+//// Matches "/echo [whatever]"
+// bot.onText(/\/start (.+)/,
+bot.onText(/\/start/, (msg, match) => {
     const chatId = msg.chat.id;
     const resp = match[1]; // the captured "whatever"
 
     // send back the matched "whatever" to the chat
-    bot.sendMessage(chatId, resp);
+    // let replyOptions = {
+    //     reply_markup: {
+    //         resize_keyboard: true,
+    //         keyboard: [
+    //             ['читать далее'],
+    //             ['список авторов'],
+    //             ['выбрать книгу']
+    //         ],
+    //     },
+    // };
+    // bot.sendMessage(chatId, "первое предложение", replyOptions);
+
 });
 
 bot.on('callback_query', (msg) => {
     console.log("callback_query from.is_bot:" + msg.message.from.is_bot + " message_id: " + msg.message.message_id + "msg id: " + msg.id);
-    if (msg.data == 'authors') {
+    if (msg.data === 'authors') {
         sqlManager.selectAuthors(con, function (err, result) {
             if (err) throw err;
 
@@ -134,9 +158,44 @@ bot.on('callback_query', (msg) => {
                     let arrayOfAuthors = JSON.parse(JSON.stringify(result));
                     let mappedArray = arrayOfAuthors.map(result => result.Description);
                     console.log(mappedArray);
-                    bot.sendMessage(msg.message.chat.id, JSON.stringify(mappedArray));
+                    bot.sendMessage(msg.message.chat.id, 'Список:', authorsKeyboard(mappedArray));
                 });
         });
+    }
+
+    if (msg.data === 'read_next') {
+        sqlManager.selectAuthors(con, function (err, result) {
+            if (err) throw err;
+
+            console.log(result);
+            bot.answerCallbackQuery(msg.id)
+                .then(() => {
+                    bot.sendMessage(msg.message.chat.id, sqlManager.getNext("user"), fullKeyboard);
+                });
+        });
+    }
+
+    if (msg.data === 'select_new_book') {
+        sqlManager.selectAuthors(con, function (err, result) {
+            if (err) throw err;
+
+            console.log(result);
+            bot.answerCallbackQuery(msg.id)
+                .then(() => {
+                    var names = ['1', '2', '3'];
+                    bot.sendMessage(msg.message.chat.id, "книги", booksKeyboard(names));
+                });
+        });
+    }
+
+    var regBook = /\/book (.+)/;
+    if (regBook.test(msg.data)) {
+        const resp = msg.data.match(regBook);
+        bot.answerCallbackQuery(msg.id)
+            .then(() => {
+                var a = ('первое предложение %s', resp[1]);
+                bot.sendMessage(msg.message.chat.id, a.toString(), fullKeyboard);
+            });
     }
     console.log(msg.data);
 });
@@ -164,26 +223,76 @@ bot.on('message', (msg) => {
     //   "date": 1525966284,
     //   "text": "1"
     // }
-    console.log(msg.toString())
+    console.log("message", msg.toString())
     // send a message to the chat acknowledging receipt of their message
     // bot.sendMessage(chatId, 'Received your message');
-    bot.sendMessage(msg.chat.id, 'Хотите почитать?', {
-        reply_markup: {
-
-            inline_keyboard: [[
-                {
-                    text: 'читать далее',
-                    callback_data: 'read_next'
-                },
-                {
-                    text: 'Выбрать книгу',
-                    callback_data: 'select_new_book'
-                },
-                {
-                    text: 'Список авторов',
-                    callback_data: 'authors'
-                }
-            ]]
-        }
-    })
+    bot.sendMessage(msg.chat.id, msg.text, fullKeyboard)
 });
+
+
+let booksKeyboard = function (names) {
+    let inline_keyboard = [];
+    names.forEach(function (value) {
+        console.log(value);
+        let element = [{text: value, callback_data: "/book " + value}];
+        inline_keyboard.push(element);
+    });
+    inline_keyboard.push([
+        {
+            text: 'Выбрать книгу',
+            callback_data: 'select_new_book'
+        },
+        {
+            text: 'Список авторов',
+            callback_data: 'authors'
+        }
+    ]);
+    return {
+        reply_markup: {
+            inline_keyboard
+        }
+    }
+};
+
+let authorsKeyboard = function (names) {
+    let inline_keyboard = [];
+    names.forEach(function (value) {
+        console.log(value);
+        let element = [{text: value, callback_data: "/book " + value}];
+        inline_keyboard.push(element);
+    });
+    inline_keyboard.push([
+        {
+            text: 'Выбрать книгу',
+            callback_data: 'select_new_book'
+        },
+        {
+            text: 'Читать далее',
+            callback_data: 'read_next'
+        }
+    ]);
+    return {
+        reply_markup: {
+            inline_keyboard
+        }
+    }
+};
+
+let fullKeyboard = {
+    reply_markup: {
+        inline_keyboard: [[
+            {
+                text: 'Читать далее ',
+                callback_data: 'read_next'
+            },
+            {
+                text: 'Выбрать книгу',
+                callback_data: 'select_new_book'
+            },
+            {
+                text: 'Список авторов',
+                callback_data: 'authors'
+            }
+        ]]
+    }
+};
