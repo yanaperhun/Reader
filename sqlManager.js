@@ -69,21 +69,78 @@ findOffsets = function (con, text, bookId) {
     }
 };
 
-exports.getNext = function (user) {
-    return 'Next value from DB';
+exports.getBooksList = function (con, callback) {
+    var sql = "SELECT * FROM t_Books";
+    con.query(sql, callback);
 };
 
-exports.setBookToUser = function (user, book) {
-    return "success";
+exports.getBooksByAuthor = function (con, authorId) {
+    var sqlSelect = "SELECT aut.Description, bks.Name FROM t_Authors aut, t_Books bks WHERE bks.AuthorId  = aut.Id AND aut.Id = " + authorId;
+    return con.query(sqlSelect, function (err, result) {
+        if (err) throw err;
+        console.log(result);
+        return result;
+    });
 };
 
-exports.getBooksList = function() {
-    return  ['1', '2', '3'];
+exports.getNext = function (con, userId) {
+    var sqlSelect = "SELECT off.Content, off.Id FROM t_Users usr, t_Offsets off WHERE usr.OffsetId + 1 = off.Id AND usr.Id =" + userId;
+
+    con.query(sqlSelect, function (err, result) {
+
+        if (err) throw err;
+        console.log(result);
+
+        var sqlUpdate = "UPDATE t_Users usr SET usr.OffsetId = " + result.Id + " WHERE usr.Id = " + userId;
+        con.query(sqlUpdate, function (err, result) {
+            if (err) throw err;
+            console.log(result);
+        });
+
+        return result.Content;
+    });
 };
 
-exports.getAuthorsList = function() {
-    return  ['a1', 'a2', 'a3'];
+
+exports.setBookToUser = function (con, userId, bookId) {
+    var sqlUpdate = "UPDATE t_Users usr SET usr.OffsetId = (SELECT off.Id FROM t_Offsets off WHERE off.BookId = "
+        + bookId + " LIMIT 1), usr.BookId = "
+        + bookId + " WHERE usr.Id =" + userId;
+    con.query(sqlUpdate, function (err, result) {
+        if (err) throw err;
+        console.log(result);
+    });
 };
+
+exports.checkIfUserExists = function (con, userId) {
+    return new Promise(function (resolve, reject) {
+        var sql = "SELECT * FROM t_Users usr WHERE usr.Id = " + userId;
+        con.query(sql, function (err, result) {
+            if (err) {
+                reject(err);
+                throw err;
+            }
+            console.log(result);
+
+            if (result.length < 1) {
+
+                var sql = "INSERT INTO t_Users (Id, BookId, OffsetId) VALUES(" + userId + ",0,0)";
+                con.query(sql, function (err, result) {
+                    if (err) {
+                        reject(err);
+                        throw err;
+                    }
+                    console.log(result);
+                    resolve();
+                });
+            } else {
+                resolve();
+            }
+        });
+    })
+};
+
+
 
 
 insertOffset = function (con, content, bookId) {

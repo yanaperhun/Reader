@@ -131,18 +131,12 @@ bot.onText(/\/start/, (msg, match) => {
     const chatId = msg.chat.id;
     const resp = match[1]; // the captured "whatever"
 
-    // send back the matched "whatever" to the chat
-    // let replyOptions = {
-    //     reply_markup: {
-    //         resize_keyboard: true,
-    //         keyboard: [
-    //             ['читать далее'],
-    //             ['список авторов'],
-    //             ['выбрать книгу']
-    //         ],
-    //     },
-    // };
-    // bot.sendMessage(chatId, "первое предложение", replyOptions);
+    sqlManager
+        .checkIfUserExists(con, msg.from.id)
+        .then(() => {
+            bot.sendMessage(msg.chat.id, "Далее:", startKeyboard)
+        });
+    console.log(msg.from);
 
 });
 
@@ -180,11 +174,19 @@ bot.on('callback_query', (msg) => {
             if (err) throw err;
 
             console.log(result);
-            bot.answerCallbackQuery(msg.id)
-                .then(() => {
-                    var names = ['1', '2', '3'];
-                    bot.sendMessage(msg.message.chat.id, "книги", booksKeyboard(names));
-                });
+
+            sqlManager.getBooksList(con, function (err, result) {
+                if (err) throw err;
+
+                console.log(result);
+                bot.answerCallbackQuery(msg.id)
+                    .then(() => {
+                        let arrayOfAuthors = JSON.parse(JSON.stringify(result));
+                        let mappedArray = arrayOfAuthors.map(result => result.Name);
+                        console.log(mappedArray);
+                        bot.sendMessage(msg.message.chat.id, 'Книги:', booksKeyboard(mappedArray));
+                    });
+            });
         });
     }
 
@@ -226,7 +228,7 @@ bot.on('message', (msg) => {
     console.log("message", msg.toString())
     // send a message to the chat acknowledging receipt of their message
     // bot.sendMessage(chatId, 'Received your message');
-    bot.sendMessage(msg.chat.id, msg.text, fullKeyboard)
+    // bot.sendMessage(msg.chat.id, msg.text, fullKeyboard)
 });
 
 
@@ -285,6 +287,21 @@ let fullKeyboard = {
                 text: 'Читать далее ',
                 callback_data: 'read_next'
             },
+            {
+                text: 'Выбрать книгу',
+                callback_data: 'select_new_book'
+            },
+            {
+                text: 'Список авторов',
+                callback_data: 'authors'
+            }
+        ]]
+    }
+};
+
+let startKeyboard = {
+    reply_markup: {
+        inline_keyboard: [[
             {
                 text: 'Выбрать книгу',
                 callback_data: 'select_new_book'
