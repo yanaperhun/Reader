@@ -1,8 +1,7 @@
-//created by lvm
-
 fs = require('fs');
 
 exports.insertBookToDb = function (con, author, book, text) {
+    console.log('insertBookToDb');
     var sqlAuthor = "INSERT INTO t_Authors (Description) VALUES ('" + author + "')";
     con.query(sqlAuthor, function (err, result) {
         if (err) throw err;
@@ -14,21 +13,20 @@ exports.insertBookToDb = function (con, author, book, text) {
             findOffsets(con, text, result.insertId)
         });
 
-        findOffsets(con, text, result.insertId)
     });
 };
 
 exports.selectAuthors = function (con, callback) {
     con.query("SELECT * FROM t_Authors", callback);
-}
+};
 
 findOffsets = function (con, text, bookId) {
+    console.log("find offsets");
     var wordCounter = 0;
-    var isSpaceDetected = true;
     var startIndex = 0;
 
     for (var i = 0; i < text.length; i++) {
-        // console.log(text.charAt(i) + ' ' + /\s/.test(text.charAt(i)))
+
         if (/\s/.test(text.charAt(i))) {
             wordCounter++;
         }
@@ -42,30 +40,6 @@ findOffsets = function (con, text, bookId) {
         if (i === text.length - 1) {
             insertOffset(con, text.substring(startIndex, i), bookId);
         }
-        // if (isSpaceDetected) {
-        //     if (isLetter(text.charAt(i)) || isDigit(text.charAt(i))) {
-        //         wordCounter++;
-        //         isSpaceDetected = false;
-        //     }
-        // } else {
-        //     isSpaceDetected = /\s/.test(text.charAt(i));
-        //     console.log((/\s/.test(text.charAt(i))) + ' wordCounter :' + wordCounter + ' i: ' + i);
-        // }
-        //
-        // if (isSpaceDetected) {
-        //     if (wordCounter === 2) {
-        //         wordCounter = 0;
-        //         console.log("1 text.substring: " + 'start index : ' + startIndex
-        //             + ' i : ' + i + ' ' + text.substring(startIndex, i))
-        //         insertOffset(con, text.substring(startIndex, i), bookId);
-        //         startIndex = i + 1;
-        //     }
-        // }
-        // if (i === text.length - 1) {
-        //     console.log("2 text.substring: " + 'start index : ' + startIndex
-        //         + ' i : ' + i + ' ' + text.substring(startIndex, i))
-        //     insertOffset(con, text.substring(startIndex, text.length), bookId);
-        // }
     }
 };
 
@@ -74,41 +48,54 @@ exports.getBooksList = function (con, callback) {
     con.query(sql, callback);
 };
 
-exports.getBooksByAuthor = function (con, authorId) {
-    var sqlSelect = "SELECT aut.Description, bks.Name FROM t_Authors aut, t_Books bks WHERE bks.AuthorId  = aut.Id AND aut.Id = " + authorId;
-    return con.query(sqlSelect, function (err, result) {
-        if (err) throw err;
-        console.log(result);
-        return result;
-    });
+exports.getBooksByAuthor = function (con, authorId, callback) {
+    var sqlSelect = "SELECT aut.Description, bks.Name,  bks.Id FROM t_Authors aut, t_Books bks WHERE bks.AuthorId  = aut.Id AND aut.Id = " + authorId;
+    return con.query(sqlSelect, callback);
 };
 
-exports.getNext = function (con, userId) {
+exports.getNext = function (con, userId, callback) {
     var sqlSelect = "SELECT off.Content, off.Id FROM t_Users usr, t_Offsets off WHERE usr.OffsetId + 1 = off.Id AND usr.Id =" + userId;
 
     con.query(sqlSelect, function (err, result) {
 
-        if (err) throw err;
-        console.log(result);
+        if (err) {
+            console.log(err);
+            callback("Next content is empty", null);
+        } else {
 
-        var sqlUpdate = "UPDATE t_Users usr SET usr.OffsetId = " + result.Id + " WHERE usr.Id = " + userId;
-        con.query(sqlUpdate, function (err, result) {
-            if (err) throw err;
-            console.log(result);
-        });
+            if (result.length > 0) {
+                var content = result[0].Content;
+                var sqlUpdate = "UPDATE t_Users usr SET usr.OffsetId = " + result[0].Id + " WHERE usr.Id = " + userId;
+                con.query(sqlUpdate, function (err, result) {
+                    if (err) throw err;
+                    console.log(result);
+                    callback(err, content);
+                });
+            } else {
+                callback("Next content is empty", null);
+            }
+        }
 
-        return result.Content;
     });
 };
 
 
-exports.setBookToUser = function (con, userId, bookId) {
-    var sqlUpdate = "UPDATE t_Users usr SET usr.OffsetId = (SELECT off.Id FROM t_Offsets off WHERE off.BookId = "
-        + bookId + " LIMIT 1), usr.BookId = "
+exports.setBookToUser = function (con, userId, bookId, callback) {
+    var sqlUpdateUser = "UPDATE t_Users usr SET usr.OffsetId = (SELECT off.Id FROM t_Offsets off WHERE off.BookId = "
+        + bookId + " ORDER BY off.Id ASC LIMIT 1), usr.BookId = "
         + bookId + " WHERE usr.Id =" + userId;
-    con.query(sqlUpdate, function (err, result) {
+    con.query(sqlUpdateUser, function (err, result) {
         if (err) throw err;
-        console.log(result);
+        var sqlSelectFirstElement = "SELECT off.Content, off.Id FROM t_Users usr, t_Offsets off WHERE usr.OffsetId = off.Id AND usr.Id =" + userId;
+
+        con.query(sqlSelectFirstElement, function (err, result) {
+            if (err || result.length < 1) {
+                callback(err, "Can't get first element for book")
+            } else {
+                callback(null, result[0].Content);
+            }
+
+        })
     });
 };
 
@@ -141,16 +128,15 @@ exports.checkIfUserExists = function (con, userId) {
 };
 
 
-
-
 insertOffset = function (con, content, bookId) {
     var sql = "INSERT INTO t_Offsets (BookId, Content) VALUES ('" + bookId + "','" + content + "')";
     con.query(sql, function (err, result) {
         if (err) throw err;
         console.log("1 record inserted : " + content);
     });
+    //
+    // console.log('insert :' + content);
 
-    console.log("1 record inserted : " + content);
 };
 
 function isLetter(char) {
@@ -161,7 +147,7 @@ function isDigit(char) {
     return char.length === 1 && char.match(/[0-9]/i);
 }
 
-exports.readStringFromFile = function (callback) {
-    fs.readFile("1984.txt", "utf8",
+exports.readStringFromFile = function (fileName, callback) {
+    fs.readFile(fileName, "utf8",
         callback);
 };
