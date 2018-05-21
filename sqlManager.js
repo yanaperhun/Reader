@@ -99,25 +99,26 @@ exports.setBookToUser = function (con, userId, bookId, callback) {
     });
 };
 
-exports.checkIfUserExists = function (con, userId) {
+exports.checkIfUserExists = function (con, userId, username) {
     return new Promise(function (resolve, reject) {
         var sql = "SELECT * FROM t_Users usr WHERE usr.Id = " + userId;
         con.query(sql, function (err, result) {
             if (err) {
-                reject(err);
-                throw err;
+                reject("Can't select from t_Users");
+
             }
-            console.log(result);
+            console.log("SELECT * FROM t_Users : " + result + 'time: ' + new Date().toISOString());
 
             if (result.length < 1) {
 
-                var sql = "INSERT INTO t_Users (Id, BookId, OffsetId) VALUES(" + userId + ",0,0)";
+                var sql = "INSERT INTO t_Users (Id, BookId, OffsetId, Username) VALUES(" + userId + ",0,0, '" + username + "')";
                 con.query(sql, function (err, result) {
                     if (err) {
-                        reject(err);
-                        throw err;
+                        reject("Can't insert to t_Users");
+
                     }
                     console.log(result);
+                    console.log("INSERT INTO t_Users : " + result + 'time: ' + new Date().toISOString());
                     resolve();
                 });
             } else {

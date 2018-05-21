@@ -125,18 +125,19 @@ app.listen(port, (err) => {
     console.log(`server is listening on ${port}`)
 });
 
-//// Matches "/echo [whatever]"
-// bot.onText(/\/start (.+)/,
 bot.onText(/\/start/, (msg, match) => {
     const chatId = msg.chat.id;
     const resp = match[1]; // the captured "whatever"
-
+    console.log("onText(start/ : " + 'time: ' + new Date().toISOString());
     sqlManager
-        .checkIfUserExists(con, msg.from.id)
+        .checkIfUserExists(con, msg.from.id, msg.from.username)
         .then(() => {
             bot.sendMessage(msg.chat.id, "Далее:", startKeyboard)
+        })
+        .catch(reason => {
+            console.log(reason);
         });
-    console.log(msg.from);
+    console.log('start : ' + msg.from);
 
 });
 
@@ -232,7 +233,7 @@ bot.on('callback_query', (msg) => {
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
 
-    console.log("message", msg.toString())
+    console.log("message", msg.text + ' from: ' + msg.from.username + ' ' + msg.from.id);
 
 });
 
