@@ -1,57 +1,3 @@
-// var createError = require('http-errors');
-// var express = require('express');
-// var path = require('path');
-// var cookieParser = require('cookie-parser');
-// var logger = require('morgan');
-//
-// var indexRouter = require('./routes/index');
-// var usersRouter = require('./routes/users');
-//
-// var app = express();
-//
-// // view engine setup
-// app.set('views', path.join(__dirname, 'views'));
-// app.set('view engine', 'pug');
-//
-// app.use(logger('dev'));
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: false }));
-// app.use(cookieParser());
-// app.use(express.static(path.join(__dirname, 'public')));
-//
-// app.use('/', indexRouter);
-// app.use('/users', usersRouter);
-//
-// // catch 404 and forward to error handler
-// app.use(function(req, res, next) {
-//   next(createError(404));
-// });
-//
-// // error handler
-// app.use(function(err, req, res, next) {
-//   // set locals, only providing error in development
-//   res.locals.message = err.message;
-//   res.locals.error = req.app.get('env') === 'development' ? err : {};
-//
-//   // render the error page
-//   res.status(err.status || 500);
-//   res.render('error');
-// });
-//
-// module.exports = app;
-//
-// var dt = require('./myfirstmodul');
-//
-// console.log("test");
-//
-// var http = require('http');
-//
-// http.createServer(function (req, res) {
-//     res.writeHead(200, {'Content-Type': 'text/plain'});
-//     res.write("The date and time are currently: " + dt.myDateTime());
-//     res.end('Hello World Yana!');
-// }).listen(8080);
-
 const books = require('./books');
 const sqlManager = require('./sqlManager');
 const express = require('express');
@@ -96,8 +42,7 @@ app.get('/books', (request, response) => {
 });
 
 app.get('/upload_book', (request, response) => {
-    // sqlManager.insertBookToDb(connection, "Оурел", "1984", )
-    sqlManager.readStringFromFile("parents_and_children.txt", function (error, data) {
+    sqlManager.readStringFromFile("name.txt", function (error, data) {
         console.log("Асинхронное чтение файла");
         if (error) {
             console.log(error);
@@ -105,7 +50,7 @@ app.get('/upload_book', (request, response) => {
         } else {
             response.send(data)
             // console.log(data.toString());
-            sqlManager.insertBookToDb(con, 'Иван Тургенев', 'Отцы и Дети', data)
+            sqlManager.insertBookToDb(con, '', '', data)
         }// выводим считанные данные
     })
 });
@@ -170,6 +115,7 @@ bot.on('callback_query', (msg) => {
                 .then(() => {
                     if (result && result.length > 0) {
                         bot.sendMessage(msg.message.chat.id, result, fullKeyboard);
+                        pinProgress(msg.message.chat.id);
                     } else {
                         bot.sendMessage(msg.message.chat.id, "Вы еще не выбрали книгу", startKeyboard);
                     }
@@ -236,6 +182,9 @@ bot.on('message', (msg) => {
     console.log("message", msg.text + ' from: ' + msg.from.username + ' ' + msg.from.id);
 
 });
+
+function pinProgress(chatId) {
+}
 
 
 let booksKeyboard = function (names) {
